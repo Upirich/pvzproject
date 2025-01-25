@@ -2,6 +2,7 @@ import pygame
 import random
 import os
 import sys
+import math
 
 
 pygame.init()
@@ -133,13 +134,22 @@ class Board:
                     1,
                 )
 
+    def get_cell(self, mouse_pos):
+        x, y = mouse_pos
+        print(x, y)
+        height = (x - self.left) // self.cell_width
+        width = (y - self.top) // self.cell_hight
+        print(width, height)
+        if 0 <= width < self.width and 1 <= height < self.height - 1:
+            return height, width
+        return None
+
 
 class Sun(pygame.sprite.Sprite):
     image = load_image("sun.png")
 
     def __init__(self, *group):
         super().__init__(*group)
-        self.image = Sun.image
         self.image = pygame.transform.scale(Sun.image, (75, 75))
         self.rect = self.image.get_rect()
         self.mask = pygame.mask.from_surface(Sun.image)
@@ -150,15 +160,40 @@ class Sun(pygame.sprite.Sprite):
         self.last_y = random.randint(225, 675)
 
     def on_click(self, pos):
+        flag = False
         if self.rect.collidepoint(pos):
+            flag = True
             Sam.sunam += 25
             self.kill()
-    
+        return True if flag else False
+
     def update(self):
         self.rect.y += self.speed
         if self.rect.y >= self.last_y:
             self.speed = 0
-        
+
+
+class Plant(pygame.sprite.Sprite):
+    def __init__(self, xcell, ycell, frames, animation_speed=35):
+        super().__init__()
+        self.frames = frames
+        self.current_frame = 0
+        self.image = pygame.transform.scale(self.frames[self.current_frame], (125, 125))
+        self.rect = self.image.get_rect()
+        self.rect.x = (xcell * board.cell_hight + board.left) - (22 * xcell)
+        self.rect.y = (ycell * board.cell_width + board.top) + (20 * ycell)
+        self.dragging = False
+        self.last_update = pygame.time.get_ticks()
+        self.animation_speed = animation_speed
+
+    def update(self, *args):
+        now = pygame.time.get_ticks()
+        if now - self.last_update > self.animation_speed:
+            self.last_update = now
+            self.current_frame = (self.current_frame + 1) % len(self.frames)
+            self.image = pygame.transform.scale(
+                self.frames[self.current_frame], (125, 125)
+            )
 
 
 # Класс для зомби
@@ -210,8 +245,16 @@ def load_zombie_frames():
     :return: Список кадров.
     """
     frames = []
-    for i in range(1, 42):
+    for i in range(1, 43):
         frame = pygame.image.load(f"assets/zombies/frame ({i}).gif").convert_alpha()
+        frames.append(frame)
+    return frames
+
+
+def load_plants_frames():
+    frames = []
+    for i in range(1, 50):
+        frame = pygame.image.load(f"sunflower/frame-{i}.gif").convert_alpha()
         frames.append(frame)
     return frames
 
@@ -228,8 +271,23 @@ def spawn_zombie(frames):
     zombies.add(zombie)  # Добавляем в группу
 
 
+def spawn_plant(frames):
+    coords = board.get_cell(pygame.mouse.get_pos())
+    if coords == None:
+        return None
+    else:
+        x = coords[0] * board.cell_hight + board.left - 22 * coords[0]
+        y = coords[1] * board.cell_width + board.top + 20 * coords[1]
+        for el in plants:
+            if el.rect.x == x and el.rect.y == y:
+                return None
+        plant = Plant(coords[0], coords[1], frames)
+        plants.add(plant)
+
+
 # Основной игровой цикл
 def main():
+    selected_plant = None
     clock = pygame.time.Clock()  # Создаем таймер
     background = pygame.image.load("jardin.png")  # Загружаем фон
     background = pygame.transform.scale(background, (WIDTH, HEIGHT))  # Масштабируем фон
@@ -243,8 +301,12 @@ def main():
             if event.type == pygame.QUIT:  # Если нажата кнопка закрытия
                 running = False
             if event.type == pygame.MOUSEBUTTONDOWN:
+                flag = True
                 for elem in sungroup:
-                    elem.on_click(event.pos)
+                    if elem.on_click(event.pos):
+                        flag = False
+                if flag:
+                    spawn_plant(plant_frames)
 
         # Обновляем таймер спавна
         spawn_timer += clock.get_time()
@@ -255,6 +317,7 @@ def main():
 
         zombies.update()  # Обновляем зомби
         sungroup.update()
+        plants.update()
 
         # Отрисовка всех элементов
         screen.blit(background, (0, 0))  # Фон
@@ -262,6 +325,7 @@ def main():
         Pboard.renderr(screen)  # Панель выбора растений
         Sam.renderrr(screen)  # Панель с солнцами
         zombies.draw(screen)  # Зомби
+        plants.draw(screen)
         sungroup.draw(screen)
 
         pygame.display.flip()  # Обновляем экран
@@ -277,7 +341,9 @@ if __name__ == "__main__":
 
     zombies = pygame.sprite.Group()  # Группа для зомби
     sungroup = pygame.sprite.Group()
+    plants = pygame.sprite.Group()
 
     zombie_frames = load_zombie_frames()  # Загружаем кадры зомби
+    plant_frames = load_plants_frames()
 
     main()  # Запускаем игру
