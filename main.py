@@ -8,12 +8,16 @@ pygame.init()
 # Константы для игры
 WIDTH, HEIGHT = 1300, 800  # Размер окна
 FPS = 60  # Частота кадров
+PLANTSIMAGES = [f"frame-{i}.png" for i in range(1, len(os.listdir("PBoardImages")) + 1)]
+DARKPLANTSIMAGES = [
+    f"frame-{i}.png" for i in range(1, len(os.listdir("DarkPBoardImages")) + 1)
+]
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Plants vs Zombies")
 
 
-def load_image(name, colorkey=None):
-    fullname = os.path.join("data", name)
+def load_image(name, colorkey=None, papka="data"):
+    fullname = os.path.join(papka, name)
     if not os.path.isfile(fullname):
         print(f"Файл с изображением '{fullname}' не найден")
         sys.exit()
@@ -33,7 +37,7 @@ def load_image(name, colorkey=None):
 class SunAmount:
     def __init__(self):
         self.cell_s = 110  # Размер ячейки для отображения солнц
-        self.sunam = 50  # Изначальное количество солнц
+        self.sunam = 10000  # Изначальное количество солнц
 
     def renderrr(self, scr):
         """
@@ -75,7 +79,7 @@ class SunAmount:
 class PlantBoard:
     def __init__(self):
         self.width = 4  # Количество ячеек
-        self.cell_size = 110  # Размер ячейки
+        self.cell_size = 100  # Размер ячейки
         self.left = 150
         self.top = 10
         self.selected_plant = None
@@ -88,42 +92,12 @@ class PlantBoard:
         :param scr: Поверхность для отрисовки.
         """
         for row in range(self.width):
-            if row == self.numcol:
-                colr = pygame.Color("Gray")
+            if self.numcol == row:
+                im = load_image(PLANTSIMAGES[row], papka="DarkPBoardImages")
             else:
-                colr = pygame.Color("White")
-            # Рисуем ячейку
-            pygame.draw.rect(
-                scr,
-                colr,
-                (
-                    row * self.cell_size + self.left,
-                    self.top,
-                    self.cell_size,
-                    self.cell_size,
-                ),
-            )
-            # Рисуем границу ячейки
-            pygame.draw.rect(
-                scr,
-                pygame.Color("black"),
-                (
-                    row * self.cell_size + self.left,
-                    self.top,
-                    self.cell_size,
-                    self.cell_size,
-                ),
-                1,
-            )
-            font = pygame.font.Font(None, 40)
-            text = font.render(str(self.prices[row]), True, (0, 0, 0))
-            scr.blit(
-                text,
-                (
-                    row * self.cell_size + self.left,
-                    self.cell_size - 15,
-                ),
-            )
+                im = load_image(PLANTSIMAGES[row], papka="PBoardImages")
+            im = pygame.transform.scale(im, (self.cell_size, self.cell_size))
+            scr.blit(im, (row * self.cell_size + self.left, self.top))
 
     def get_cell(self, mouse_pos):
         x, y = mouse_pos
@@ -135,7 +109,6 @@ class PlantBoard:
                 self.numcol = None
             else:
                 self.selected_plant = height
-                print(self.selected_plant)
                 self.numcol = height
             return True
         return False
@@ -153,13 +126,8 @@ class Board:
         self.cell_hight = 125  # Высота ячейки
 
     def render(self, scr):
-        """
-        Отрисовывает игровое поле.
-        :param scr: Поверхность для отрисовки.
-        """
         for row in range(self.height):
             for col in range(self.width):
-                # Рисуем границу ячейки
                 pygame.draw.rect(
                     scr,
                     pygame.Color("black"),
@@ -205,7 +173,7 @@ class Sun(pygame.sprite.Sprite):
             flag = True
             Sam.sunam += 25
             self.kill()
-        return True if flag else False
+        return flag
 
     def update(self):
         self.rect.y += self.speed
@@ -214,17 +182,18 @@ class Sun(pygame.sprite.Sprite):
 
 
 class Plant(pygame.sprite.Sprite):
+
     def __init__(self, xcell, ycell, frames, animation_speed=35):
         super().__init__()
         self.frames = frames
         self.current_frame = 0
-        self.image = pygame.transform.scale(self.frames[self.current_frame], (125, 125))
+        self.image = pygame.transform.scale(self.frames[self.current_frame], (128, 128))
         self.rect = self.image.get_rect()
         self.rect.x = (xcell * board.cell_hight + board.left) - (22 * xcell)
-        self.rect.y = (ycell * board.cell_width + board.top) + (20 * ycell)
-        self.dragging = False
+        self.rect.y = (ycell * board.cell_width + board.top - 2) + (20 * ycell)
         self.last_update = pygame.time.get_ticks()
         self.animation_speed = animation_speed
+        self.mask = pygame.mask.from_surface(self.image)
 
     def update(self):
         now = pygame.time.get_ticks()
@@ -232,7 +201,7 @@ class Plant(pygame.sprite.Sprite):
             self.last_update = now
             self.current_frame = (self.current_frame + 1) % len(self.frames)
             self.image = pygame.transform.scale(
-                self.frames[self.current_frame], (125, 125)
+                self.frames[self.current_frame], (128, 128)
             )
 
 
@@ -242,6 +211,7 @@ class Sunflower(Plant):
     def __init__(self, xcell, ycell, frames):
         super().__init__(xcell, ycell, frames)
         self.last_sun = 0
+        self.health = 100
 
     def update(self):
         super().update()
@@ -249,6 +219,21 @@ class Sunflower(Plant):
         if self.last_sun >= 10000:
             self.last_sun = 0
             sungroup.add(Sun(True, self.rect.x, self.rect.y))
+
+
+class WallNut(Plant):
+
+    def __init__(self, xcell, ycell, frames):
+        super().__init__(xcell, ycell, frames)
+        self.health = 500
+        self.rect.x = xcell * board.cell_hight + board.left + 10 - (20 * xcell)
+        self.rect.y = (ycell * board.cell_width + board.top + 14) + (22 * ycell)
+        self.image = pygame.transform.scale(self.frames[self.current_frame], (95, 90))
+        self.mask = pygame.mask.from_surface(self.image)
+
+    def update(self):
+        super().update()
+        self.image = pygame.transform.scale(self.frames[self.current_frame], (95, 90))
 
 
 # Класс для зомби
@@ -306,10 +291,10 @@ def load_zombie_frames():
     return frames
 
 
-def load_plants_frames():
+def load_plants_frames(plant):
     frames = []
-    for i in range(1, 50):
-        frame = pygame.image.load(f"sunflower/frame-{i}.gif").convert_alpha()
+    for i in range(1, len(os.listdir(plant)) + 1):
+        frame = pygame.image.load(f"{plant}/frame-{i}.gif").convert_alpha()
         frames.append(frame)
     return frames
 
@@ -321,25 +306,34 @@ def spawn_zombie(frames):
     :param frames: Список кадров анимации.
     """
     lane = random.randint(0, board.width - 1)  # Выбираем случайную линию
-    y_position = lane * board.cell_hight + (board.cell_hight // 2) + 20  # Позиция по Y
+    y_position = lane * board.cell_hight + (board.cell_hight // 2) + 25  # Позиция по Y
     zombie = Zombie(WIDTH, y_position, frames)  # Создаем зомби
     zombies.add(zombie)  # Добавляем в группу
 
 
 def spawn_plant(plnt):
+    plant = None
     coords = board.get_cell(pygame.mouse.get_pos())
     if coords == None:
         return None
     else:
         x = coords[0] * board.cell_hight + board.left - 22 * coords[0]
         y = coords[1] * board.cell_width + board.top + 20 * coords[1]
-        for el in plants:
-            if el.rect.x == x and el.rect.y == y:
-                return None
         if plnt == 0:
+            plant = Sunflower(coords[0], coords[1], sunflower_frames)
+        elif plnt == 1:
+            pass
+
+        elif plnt == 2:
+            plant = WallNut(coords[0], coords[1], nut_frames)
+        elif plnt == 3:
+            pass
+        if plant:
+            for el in plants:
+                if pygame.sprite.collide_mask(plant, el):
+                    return None
             if Pboard.prices[plnt] <= Sam.sunam:
                 Sam.sunam -= Pboard.prices[plnt]
-                plant = Sunflower(coords[0], coords[1], plant_frames)
                 plants.add(plant)
 
 
@@ -404,6 +398,7 @@ if __name__ == "__main__":
     plants = pygame.sprite.Group()
 
     zombie_frames = load_zombie_frames()  # Загружаем кадры зомби
-    plant_frames = load_plants_frames()
+    sunflower_frames = load_plants_frames("sunflower")
+    nut_frames = load_plants_frames("wallnut")
 
     main()  # Запускаем игру
