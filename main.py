@@ -4,10 +4,10 @@ import os
 import sys
 
 pygame.init()
-WIDTH, HEIGHT = 1300, 800  # Размер окна
-FPS = 60  # Частота кадров
 
-# Для панели выбора растений: список изображений для активного и неактивного состояния
+WIDTH, HEIGHT = 1300, 800
+FPS = 60
+
 PLANTSIMAGES = [f"frame-{i}.png" for i in range(1, len(os.listdir("PBoardImages")) + 1)]
 DARKPLANTSIMAGES = [
     f"frame-{i}.png" for i in range(1, len(os.listdir("DarkPBoardImages")) + 1)
@@ -18,13 +18,6 @@ pygame.display.set_caption("Plants vs Zombies")
 
 
 def load_image(name, colorkey=None, papka="data"):
-    """
-    Загружает изображение из папки.
-    :param name: Имя файла.
-    :param colorkey: Если не None, устанавливает прозрачность.
-    :param papka: Папка, где искать изображение.
-    :return: Загруженное изображение.
-    """
     fullname = os.path.join(papka, name)
     if not os.path.isfile(fullname):
         print(f"Файл с изображением '{fullname}' не найден")
@@ -34,38 +27,33 @@ def load_image(name, colorkey=None, papka="data"):
         image = image.convert()
         if colorkey == -1:
             colorkey = image.get_at((0, 0))
-        image.set_colorkey(colorkey)
+            image.set_colorkey(colorkey)
     else:
         image = image.convert_alpha()
     return image
 
 
-# Класс для отображения количества солнц (ресурсов)
 class SunAmount:
     def __init__(self):
-        self.cell_s = 110  # Размер ячейки для отображения солнц
-        self.sunam = 10000  # Изначальное количество солнц
+        self.cell_s = 110
+        self.sunam = 10000
 
     def renderrr(self, scr):
-        # Рисуем черный прямоугольник
         pygame.draw.rect(
             scr, pygame.Color("black"), (5, 10, self.cell_s, self.cell_s), 1
         )
-        # Рисуем большое желтое солнце
         pygame.draw.circle(
             scr,
             pygame.Color((255, 236, 20)),
             (5 + (self.cell_s // 2), 10 + (self.cell_s // 3)),
             self.cell_s // 3,
         )
-        # Рисуем малое оранжевое солнце
         pygame.draw.circle(
             scr,
             pygame.Color((255, 186, 0)),
             (5 + (self.cell_s // 2), 10 + (self.cell_s // 3)),
             self.cell_s // 4,
         )
-        # Отображаем текст с количеством солнц
         font = pygame.font.Font(None, 40)
         text = font.render(str(self.sunam), True, (0, 0, 0))
         if self.sunam < 10:
@@ -78,11 +66,10 @@ class SunAmount:
             scr.blit(text, (30, self.cell_s + 10 - (self.cell_s // 3)))
 
 
-# Класс для панели выбора растений
 class PlantBoard:
     def __init__(self):
-        self.width = 4  # Количество ячеек
-        self.cell_size = 110  # Размер ячейки
+        self.width = 4
+        self.cell_size = 110
         self.left = 150
         self.top = 10
         self.selected_plant = None
@@ -91,18 +78,17 @@ class PlantBoard:
 
     def renderr(self, scr):
         for row in range(self.width):
-            if self.numcol == row:
-                im = load_image(PLANTSIMAGES[row], papka="DarkPBoardImages")
-            else:
-                im = load_image(PLANTSIMAGES[row], papka="PBoardImages")
+            im = (
+                load_image(PLANTSIMAGES[row], papka="DarkPBoardImages")
+                if self.numcol == row
+                else load_image(PLANTSIMAGES[row], papka="PBoardImages")
+            )
             im = pygame.transform.scale(im, (self.cell_size, self.cell_size))
             scr.blit(im, (row * self.cell_size + self.left, self.top))
 
     def get_cell(self, mouse_pos):
         x, y = mouse_pos
-        # Предполагается, что панель состоит из одной строки ячеек
         cell_index = (x - self.left) // self.cell_size
-        # Проверяем, что клик находится внутри панели
         if self.top <= y <= self.top + self.cell_size and 0 <= cell_index < self.width:
             if self.selected_plant == cell_index:
                 self.selected_plant = None
@@ -114,11 +100,10 @@ class PlantBoard:
         return False
 
 
-# Класс для игрового поля
 class Board:
     def __init__(self, width, height):
-        self.width = width  # Количество столбцов
-        self.height = height  # Количество строк
+        self.width = width
+        self.height = height
         self.board = [[0] * width for _ in range(height)]
         self.left = 210
         self.top = 125
@@ -234,39 +219,70 @@ class WallNut(Plant):
 class PeaShooter(Plant):
     def __init__(self, xcell, ycell, frames):
         super().__init__(xcell, ycell, frames)
-        self.health = 100  # Примерное значение здоровья для горохострела
+        self.health = 100
+        self.last_shot = 0
 
     def update(self):
         super().update()
-        # Здесь можно добавить логику стрельбы горошинами
+        self.last_shot += clock.get_time()
+        if self.last_shot >= 2000:  # Стреляет каждые 2 секунды
+            self.last_shot = 0
+            peas.add(Pea(self.rect.x + 50, self.rect.y + 50))
 
 
 class CherryBomb(Plant):
     def __init__(self, xcell, ycell, frames):
         super().__init__(xcell, ycell, frames)
-        self.health = 50  # Примерное значение здоровья для вишенки
-        self.timer = 0  # Таймер до взрыва
+        self.health = 50
+        self.timer = 0
+        self.spawn_time = pygame.time.get_ticks()  # Время спавна вишни
 
     def update(self):
         super().update()
         self.timer += clock.get_time()
-        if self.timer >= 2000:  # Через 2 секунды вишенка "взрывается"
-            # Здесь можно добавить логику нанесения урона зомби в радиусе взрыва
+        if self.timer >= 2000:
+            for zombie in zombies:
+                if pygame.sprite.collide_mask(self, zombie):
+                    if (
+                        pygame.time.get_ticks() - self.spawn_time >= 8000
+                    ):  # Проверяем, прошло ли 8 секунд
+                        self.explode()
+                        return
+
+    def explode(self):
+        explosion_radius = 150  # Радиус взрыва
+        for zombie in zombies:
+            if (
+                abs(zombie.rect.x - self.rect.x) <= explosion_radius
+                and abs(zombie.rect.y - self.rect.y) <= explosion_radius
+            ):
+                zombie.health -= 100
+                if zombie.health <= 0:
+                    zombie.kill()
+        self.kill()
+
+
+class Pea(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__()
+        self.image = pygame.Surface((20, 20))
+        self.image.fill(pygame.Color("green"))
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.speed = 5
+
+    def update(self):
+        self.rect.x += self.speed
+        if self.rect.x > WIDTH:
             self.kill()
 
 
 class Zombie(pygame.sprite.Sprite):
-    def __init__(self, x, y, frames, speed=1, animation_speed=35):
-        """
-        Инициализация зомби.
-        :param x: Начальная координата по оси X.
-        :param y: Начальная координата по оси Y.
-        :param frames: Список кадров для анимации зомби.
-        :param speed: Скорость движения.
-        :param animation_speed: Скорость смены кадров (в миллисекундах).
-        """
+    def __init__(self, x, y, frames, attack_frames, speed=1, animation_speed=35):
         super().__init__()
         self.frames = frames
+        self.attack_frames = attack_frames
         self.current_frame = 0
         self.image = self.frames[self.current_frame]
         self.rect = self.image.get_rect()
@@ -276,15 +292,24 @@ class Zombie(pygame.sprite.Sprite):
         self.speed = speed
         self.animation_speed = animation_speed
         self.last_update = pygame.time.get_ticks()
+        self.is_attacking = False
+        self.health = 100
 
     def update(self):
         now = pygame.time.get_ticks()
         if now - self.last_update > self.animation_speed:
             self.last_update = now
-            self.current_frame = (self.current_frame + 1) % len(self.frames)
-            self.image = self.frames[self.current_frame]
-        self.x_pos -= self.speed
-        self.rect.x = int(self.x_pos)
+            if self.is_attacking:
+                self.current_frame = (self.current_frame + 1) % len(self.attack_frames)
+                self.image = self.attack_frames[self.current_frame]
+            else:
+                self.current_frame = (self.current_frame + 1) % len(self.frames)
+                self.image = self.frames[self.current_frame]
+
+        if not self.is_attacking:
+            self.x_pos -= self.speed
+            self.rect.x = int(self.x_pos)
+
         if self.rect.x < board.left:
             game_over_animation(screen, "Game Over")
             pygame.quit()
@@ -294,23 +319,41 @@ class Zombie(pygame.sprite.Sprite):
 def load_zombie_frames():
     frames = []
     for i in range(1, 43):
-        frame = pygame.image.load(f"assets/zombies/frame ({i}).gif").convert_alpha()
+        frame = pygame.image.load(f"assets/zombies/walk/frame-{i}.gif").convert_alpha()
+        frames.append(frame)
+    return frames
+
+
+def load_zombie_attack_frames():
+    frames = []
+    for i in range(1, 43):  # Замените на количество кадров атаки
+        frame = pygame.image.load(
+            f"assets/zombies/attack/frame-{i}.gif"
+        ).convert_alpha()
         frames.append(frame)
     return frames
 
 
 def load_plants_frames(plant):
     frames = []
-    for i in range(1, len(os.listdir(plant)) + 1):
-        frame = pygame.image.load(f"{plant}/frame-{i}.gif").convert_alpha()
-        frames.append(frame)
+    num_frames = len(os.listdir(plant))
+    for i in range(1, num_frames + 1):
+        image = pygame.image.load(f"{plant}/frame-{i}.gif")
+        if plant.lower() == "cherrybomb":
+            image = image.convert()
+            colorkey = image.get_at((0, 0))
+            image.set_colorkey(colorkey)
+            image = image.convert_alpha()
+        else:
+            image = image.convert_alpha()
+        frames.append(image)
     return frames
 
 
-def spawn_zombie(frames):
+def spawn_zombie(frames, attack_frames):
     lane = random.randint(0, board.width - 1)
     y_position = lane * board.cell_hight + (board.cell_hight // 2) + 25
-    zombie = Zombie(WIDTH, y_position, frames)
+    zombie = Zombie(WIDTH, y_position, frames, attack_frames)
     zombies.add(zombie)
 
 
@@ -359,14 +402,35 @@ def game_over_animation(scr, message, duration=3000):
         clock_anim.tick(FPS)
 
 
+def check_collisions():
+    for zombie in zombies:
+        for plant in plants:
+            if pygame.sprite.collide_mask(zombie, plant):
+                zombie.is_attacking = True
+                zombie.speed = 0
+                plant.health -= 1
+                if plant.health <= 0:
+                    plant.kill()
+                    zombie.is_attacking = False
+                    zombie.speed = 1
+    for pea in peas:
+        for zombie in zombies:
+            if pygame.sprite.collide_rect(pea, zombie):
+                zombie.health -= 10
+                if zombie.health <= 0:
+                    zombie.kill()
+                pea.kill()
+
+
 def main():
     global clock
     clock = pygame.time.Clock()
     background = pygame.image.load("jardin.png")
     background = pygame.transform.scale(background, (WIDTH, HEIGHT))
     spawn_timer = 0
-    spawn_interval = 5000  # Интервал спавна зомби в мс
+    spawn_interval = 5000
     running = True
+
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -381,14 +445,19 @@ def main():
                         continue
                     if Pboard.selected_plant is not None:
                         spawn_plant(Pboard.selected_plant)
+
         spawn_timer += clock.get_time()
         if spawn_timer >= spawn_interval:
             sungroup.add(Sun())
             spawn_timer = 0
-            spawn_zombie(zombie_frames)
+            spawn_zombie(zombie_frames, zombie_attack_frames)
+
         zombies.update()
         sungroup.update()
         plants.update()
+        peas.update()
+        check_collisions()
+
         screen.blit(background, (0, 0))
         board.render(screen)
         Pboard.renderr(screen)
@@ -396,8 +465,11 @@ def main():
         zombies.draw(screen)
         plants.draw(screen)
         sungroup.draw(screen)
+        peas.draw(screen)
+
         pygame.display.flip()
         clock.tick(FPS)
+
     pygame.quit()
 
 
@@ -408,7 +480,9 @@ if __name__ == "__main__":
     zombies = pygame.sprite.Group()
     sungroup = pygame.sprite.Group()
     plants = pygame.sprite.Group()
+    peas = pygame.sprite.Group()
     zombie_frames = load_zombie_frames()
+    zombie_attack_frames = load_zombie_attack_frames()
     sunflower_frames = load_plants_frames("sunflower")
     nut_frames = load_plants_frames("wallnut")
     pea_shooter_frames = load_plants_frames("peashooter")
