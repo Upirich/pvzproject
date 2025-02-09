@@ -235,10 +235,15 @@ class PeaShooter(Plant):
     def __init__(self, xcell, ycell, frames):
         super().__init__(xcell, ycell, frames)
         self.health = 100  # Примерное значение здоровья для горохострела
+        self.image = pygame.transform.scale(self.frames[self.current_frame], (95, 90))
+        self.mask = pygame.mask.from_surface(self.image)
+        self.rect.x = xcell * board.cell_hight + board.left + 10 - (20 * xcell)
+        self.rect.y = (ycell * board.cell_width + board.top + 14) + (22 * ycell)
 
     def update(self):
         super().update()
         # Здесь можно добавить логику стрельбы горошинами
+        self.image = pygame.transform.scale(self.frames[self.current_frame], (95, 90))
 
 
 class CherryBomb(Plant):
