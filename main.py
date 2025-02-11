@@ -132,21 +132,6 @@ class Board:
         self.cell_width = 105
         self.cell_hight = 125
 
-    def render(self, scr):
-        for row in range(self.height):
-            for col in range(self.width):
-                pygame.draw.rect(
-                    scr,
-                    pygame.Color("black"),
-                    (
-                        self.left + row * self.cell_width,
-                        self.top + col * self.cell_hight,
-                        self.cell_width,
-                        self.cell_hight,
-                    ),
-                    1,
-                )
-
     def get_cell(self, mouse_pos):
         x, y = mouse_pos
         col = (x - self.left) // self.cell_width
@@ -460,7 +445,7 @@ def main():
     background = pygame.image.load("jardin.png")
     background = pygame.transform.scale(background, (WIDTH, HEIGHT))
     spawn_timer = 0
-    spawn_interval = 1000
+    spawn_interval = 21000
     running = True
 
     while running:
@@ -494,7 +479,6 @@ def main():
         Pboard.renderr(screen)
         Sam.update()
         Sam.renderrr(screen)
-        board.render(screen)
         zombies.draw(screen)
         plants.draw(screen)
         lawnmowers.draw(screen)
