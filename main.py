@@ -36,7 +36,9 @@ def load_image(name, colorkey=None, papka="data"):
 class SunAmount:
     def __init__(self):
         self.cell_s = 110
-        self.sunam = 10000
+        self.sunam = 50
+        self.sun_timer = 0
+        self.sun_interval = 12000
 
     def renderrr(self, scr):
         pygame.draw.rect(
@@ -65,16 +67,22 @@ class SunAmount:
         else:
             scr.blit(text, (30, self.cell_s + 10 - (self.cell_s // 3)))
 
+    def update(self):
+        self.sun_timer += clock.get_time()
+        if self.sun_timer >= self.sun_interval:
+            self.sun_timer = 0
+            sungroup.add(Sun())
+
 
 class PlantBoard:
     def __init__(self):
-        self.width = 4
+        self.width = 3
         self.cell_size = 110
         self.left = 150
         self.top = 10
         self.selected_plant = None
         self.numcol = None
-        self.prices = [50, 100, 50, 150]
+        self.prices = [50, 100, 50]
 
     def renderr(self, scr):
         for row in range(self.width):
@@ -109,21 +117,6 @@ class Board:
         self.top = 125
         self.cell_width = 105
         self.cell_hight = 125
-
-    def render(self, scr):
-        for row in range(self.height):
-            for col in range(self.width):
-                pygame.draw.rect(
-                    scr,
-                    pygame.Color("black"),
-                    (
-                        self.left + row * self.cell_width,
-                        self.top + col * self.cell_hight,
-                        self.cell_width,
-                        self.cell_hight,
-                    ),
-                    1,
-                )
 
     def get_cell(self, mouse_pos):
         x, y = mouse_pos
@@ -166,7 +159,7 @@ class Sun(pygame.sprite.Sprite):
 
 
 class Plant(pygame.sprite.Sprite):
-    def __init__(self, xcell, ycell, frames, animation_speed=35):
+    def __init__(self, xcell, ycell, frames, animation_speed=30):
         super().__init__()
         self.frames = frames
         self.current_frame = 0
@@ -188,18 +181,21 @@ class Plant(pygame.sprite.Sprite):
             self.image = pygame.transform.scale(
                 self.frames[self.current_frame], (128, 128)
             )
+        if self.health <= 0:
+            self.kill()
 
 
 class Sunflower(Plant):
     def __init__(self, xcell, ycell, frames):
         super().__init__(xcell, ycell, frames)
         self.last_sun = 0
-        self.health = 100
+        self.interval = 14000
+        self.health = 300
 
     def update(self):
         super().update()
         self.last_sun += clock.get_time()
-        if self.last_sun >= 10000:
+        if self.last_sun >= self.interval:
             self.last_sun = 0
             sungroup.add(Sun(True, self.rect.x, self.rect.y))
 
@@ -207,7 +203,7 @@ class Sunflower(Plant):
 class WallNut(Plant):
     def __init__(self, xcell, ycell, frames):
         super().__init__(xcell, ycell, frames)
-        self.health = 500
+        self.health = 900
         self.rect.x = xcell * board.cell_hight + board.left + 10 - (20 * xcell)
         self.rect.y = (ycell * board.cell_width + board.top + 14) + (22 * ycell)
         self.image = pygame.transform.scale(self.frames[self.current_frame], (95, 90))
@@ -221,13 +217,13 @@ class WallNut(Plant):
 class PeaShooter(Plant):
     def __init__(self, xcell, ycell, frames):
         super().__init__(xcell, ycell, frames)
-        self.health = 100  # Примерное значение здоровья для горохострела
+        self.health = 300
         self.image = pygame.transform.scale(self.frames[self.current_frame], (95, 90))
         self.mask = pygame.mask.from_surface(self.image)
         self.rect.x = xcell * board.cell_hight + board.left + 10 - (20 * xcell)
         self.rect.y = (ycell * board.cell_width + board.top + 14) + (22 * ycell)
         self.shoot_timer = 0
-        self.shoot_interval = 2100
+        self.shoot_interval = 1650
 
     def update(self):
         self.shoot_timer += clock.get_time()
@@ -243,54 +239,6 @@ class PeaShooter(Plant):
             self.shoot_timer = 0
 
 
-class CherryBomb(Plant):
-    def __init__(self, xcell, ycell, frames):
-        super().__init__(xcell, ycell, frames)
-        self.health = 50
-        self.timer = 0
-        self.spawn_time = pygame.time.get_ticks()  # Время спавна вишни
-
-    def update(self):
-        super().update()
-        self.timer += clock.get_time()
-        if self.timer >= 2000:
-            for zombie in zombies:
-                if pygame.sprite.collide_mask(self, zombie):
-                    if (
-                        pygame.time.get_ticks() - self.spawn_time >= 8000
-                    ):  # Проверяем, прошло ли 8 секунд
-                        self.explode()
-                        return
-
-    def explode(self):
-        explosion_radius = 150  # Радиус взрыва
-        for zombie in zombies:
-            if (
-                abs(zombie.rect.x - self.rect.x) <= explosion_radius
-                and abs(zombie.rect.y - self.rect.y) <= explosion_radius
-            ):
-                zombie.health -= 100
-                if zombie.health <= 0:
-                    zombie.kill()
-        self.kill()
-
-
-class Pea(pygame.sprite.Sprite):
-    def __init__(self, x, y):
-        super().__init__()
-        self.image = pygame.Surface((20, 20))
-        self.image.fill(pygame.Color("green"))
-        self.rect = self.image.get_rect()
-        self.rect.x = x
-        self.rect.y = y
-        self.speed = 5
-
-    def update(self):
-        self.rect.x += self.speed
-        if self.rect.x > WIDTH:
-            self.kill()
-
-
 class Pea(pygame.sprite.Sprite):
     im = load_image("pea.png")
 
@@ -298,7 +246,7 @@ class Pea(pygame.sprite.Sprite):
         super().__init__()
         self.image = Pea.im
         self.mask = pygame.mask.from_surface(self.image)
-        self.speed = 4
+        self.speed = 6
         self.xcell = xcell
         self.ycell = ycell
         self.rect = self.image.get_rect()
@@ -312,6 +260,9 @@ class Pea(pygame.sprite.Sprite):
             if pygame.sprite.collide_mask(self, el):
                 el.health -= self.damage
                 self.kill()
+                break
+        if self.xcell >= 11:
+            self.kill()
 
 
 class Zombie(pygame.sprite.Sprite):
@@ -330,9 +281,13 @@ class Zombie(pygame.sprite.Sprite):
         self.animation_speed = animation_speed
         self.last_update = pygame.time.get_ticks()
         self.is_attacking = False
-        self.health = 100
+        self.health = 175
+        self.timer = 0
 
     def update(self):
+        self.timer += 1
+        if self.health <= 0:
+            self.kill()
         now = pygame.time.get_ticks()
         if now - self.last_update > self.animation_speed:
             self.last_update = now
@@ -343,9 +298,20 @@ class Zombie(pygame.sprite.Sprite):
                 self.current_frame = (self.current_frame + 1) % len(self.frames)
                 self.image = self.frames[self.current_frame]
 
-        if not self.is_attacking:
+        for plant in plants:
+            if pygame.sprite.collide_mask(self, plant) and self.ycell == plant.ycell:
+                self.is_attacking = True
+                self.speed = 0
+                plant.health -= 1
+                break
+            else:
+                self.is_attacking = False
+                self.speed = 1
+
+        if not self.is_attacking and self.timer == 2:
+            self.timer = 0
             self.x_pos -= self.speed
-            self.rect.x = int(self.x_pos)
+            self.rect.x = self.x_pos
 
         if self.rect.x < board.left:
             game_over_animation(screen, "Game Over")
@@ -363,7 +329,7 @@ def load_zombie_frames():
 
 def load_zombie_attack_frames():
     frames = []
-    for i in range(1, 40):  # Замените на количество кадров атаки
+    for i in range(1, 40):
         frame = pygame.image.load(
             f"assets/zombies/attack/frame-{i}.gif"
         ).convert_alpha()
@@ -376,13 +342,6 @@ def load_plants_frames(plant):
     num_frames = len(os.listdir(plant))
     for i in range(1, num_frames + 1):
         image = pygame.image.load(f"{plant}/frame-{i}.gif")
-        if plant.lower() == "cherrybomb":
-            image = image.convert()
-            colorkey = image.get_at((0, 0))
-            image.set_colorkey(colorkey)
-            image = image.convert_alpha()
-        else:
-            image = image.convert_alpha()
         frames.append(image)
     return frames
 
@@ -406,8 +365,6 @@ def spawn_plant(plnt):
             plant = PeaShooter(coords[0], coords[1], pea_shooter_frames)
         elif plnt == 2:
             plant = WallNut(coords[0], coords[1], nut_frames)
-        elif plnt == 3:
-            plant = CherryBomb(coords[0], coords[1], cherry_bomb_frames)
         if plant:
             for el in plants:
                 if pygame.sprite.collide_mask(plant, el):
@@ -437,26 +394,13 @@ def game_over_animation(scr, message, duration=3000):
         clock_anim.tick(FPS)
 
 
-def check_collisions():
-    for zombie in zombies:
-        for plant in plants:
-            if pygame.sprite.collide_mask(zombie, plant):
-                zombie.is_attacking = True
-                zombie.speed = 0
-                plant.health -= 1
-                if plant.health <= 0:
-                    plant.kill()
-                    zombie.is_attacking = False
-                    zombie.speed = 1
-
-
 def main():
     global clock
     clock = pygame.time.Clock()
     background = pygame.image.load("jardin.png")
     background = pygame.transform.scale(background, (WIDTH, HEIGHT))
     spawn_timer = 0
-    spawn_interval = 5000
+    spawn_interval = 21000
     running = True
 
     while running:
@@ -476,26 +420,23 @@ def main():
 
         spawn_timer += clock.get_time()
         if spawn_timer >= spawn_interval:
-            sungroup.add(Sun())
             spawn_timer = 0
+            if spawn_interval > 4000:
+                spawn_interval -= 200
             spawn_zombie(zombie_frames, zombie_attack_frames)
 
         zombies.update()
         sungroup.update()
         plants.update()
-        peas.update()
-        check_collisions()
-
         bullets.update()
         screen.blit(background, (0, 0))
-        board.render(screen)
         Pboard.renderr(screen)
+        Sam.update()
         Sam.renderrr(screen)
         zombies.draw(screen)
         plants.draw(screen)
         bullets.draw(screen)
         sungroup.draw(screen)
-        peas.draw(screen)
 
         pygame.display.flip()
         clock.tick(FPS)
@@ -510,12 +451,10 @@ if __name__ == "__main__":
     zombies = pygame.sprite.Group()
     sungroup = pygame.sprite.Group()
     plants = pygame.sprite.Group()
-    peas = pygame.sprite.Group()
     bullets = pygame.sprite.Group()
     zombie_frames = load_zombie_frames()
     zombie_attack_frames = load_zombie_attack_frames()
     sunflower_frames = load_plants_frames("sunflower")
     nut_frames = load_plants_frames("wallnut")
     pea_shooter_frames = load_plants_frames("peashooter")
-    cherry_bomb_frames = load_plants_frames("cherrybomb")
     main()
