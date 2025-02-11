@@ -76,7 +76,7 @@ class SunAmount:
 
 class PlantBoard:
     def __init__(self):
-        self.width = 3
+        self.width = 4
         self.cell_size = 110
         self.left = 150
         self.top = 10
@@ -123,6 +123,7 @@ class Board:
         col = (x - self.left) // self.cell_width
         row = (y - self.top) // self.cell_hight
         if 1 <= col < self.height - 1 and 0 <= row < self.width:
+            print(col, row)
             return col, row
         return None
 
@@ -365,10 +366,16 @@ def spawn_plant(plnt):
             plant = PeaShooter(coords[0], coords[1], pea_shooter_frames)
         elif plnt == 2:
             plant = WallNut(coords[0], coords[1], nut_frames)
+        elif plnt == 3:
+            coords = board.get_cell(pygame.mouse.get_pos())
+            for el in plants:
+                if (el.xcell, el.ycell) == coords:
+                    el.kill()
+                    return
         if plant:
             for el in plants:
                 if pygame.sprite.collide_mask(plant, el):
-                    return None
+                    return
             if Pboard.prices[plnt] <= Sam.sunam:
                 Sam.sunam -= Pboard.prices[plnt]
                 plants.add(plant)
