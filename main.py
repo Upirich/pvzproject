@@ -107,8 +107,8 @@ class Board:
         self.board = [[0] * width for _ in range(height)]
         self.left = 210
         self.top = 125
-        self.cell_width = (WIDTH - self.left) // width  # Рассчитываем ширину ячейки
-        self.cell_hight = (HEIGHT - self.top) // height  # Рассчитываем высоту ячейки
+        self.cell_width = 105
+        self.cell_hight = 125
 
     def render(self, scr):
         for row in range(self.height):
@@ -117,8 +117,8 @@ class Board:
                     scr,
                     pygame.Color("black"),
                     (
-                        self.left + col * self.cell_width,  # Правильная формула для X
-                        self.top + row * self.cell_hight,  # Правильная формула для Y
+                        self.left + row * self.cell_width,
+                        self.top + col * self.cell_hight,
                         self.cell_width,
                         self.cell_hight,
                     ),
@@ -132,32 +132,6 @@ class Board:
         if 0 <= col < self.width and 0 <= row < self.height:
             return col, row
         return None
-
-
-def spawn_plant(plnt):
-    coords = board.get_cell(pygame.mouse.get_pos())
-    if coords is None:
-        return None
-    else:
-        col, row = coords
-        x = col * board.cell_width + board.left
-        y = row * board.cell_hight + board.top
-        plant = None
-        if plnt == 0:
-            plant = Sunflower(col, row, sunflower_frames)
-        elif plnt == 1:
-            plant = PeaShooter(col, row, pea_shooter_frames)
-        elif plnt == 2:
-            plant = WallNut(col, row, nut_frames)
-        elif plnt == 3:
-            plant = CherryBomb(col, row, cherry_bomb_frames)
-        if plant:
-            for el in plants:
-                if pygame.sprite.collide_mask(plant, el):
-                    return None
-            if Pboard.prices[plnt] <= Sam.sunam:
-                Sam.sunam -= Pboard.prices[plnt]
-                plants.add(plant)
 
 
 class Sun(pygame.sprite.Sprite):
