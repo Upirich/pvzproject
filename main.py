@@ -448,13 +448,6 @@ def check_collisions():
                     plant.kill()
                     zombie.is_attacking = False
                     zombie.speed = 1
-    for pea in peas:
-        for zombie in zombies:
-            if pygame.sprite.collide_rect(pea, zombie):
-                zombie.health -= 10
-                if zombie.health <= 0:
-                    zombie.kill()
-                pea.kill()
 
 
 def main():
