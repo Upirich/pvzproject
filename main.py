@@ -118,6 +118,21 @@ class Board:
         self.cell_width = 105
         self.cell_hight = 125
 
+    def render(self, scr):
+        for row in range(self.height):
+            for col in range(self.width):
+                pygame.draw.rect(
+                    scr,
+                    pygame.Color("black"),
+                    (
+                        self.left + row * self.cell_width,
+                        self.top + col * self.cell_hight,
+                        self.cell_width,
+                        self.cell_hight,
+                    ),
+                    1,
+                )
+
     def get_cell(self, mouse_pos):
         x, y = mouse_pos
         col = (x - self.left) // self.cell_width
@@ -126,6 +141,34 @@ class Board:
             print(col, row)
             return col, row
         return None
+
+
+class LawnMower(pygame.sprite.Sprite):
+    im = load_image("LawnMower.png")
+
+    def __init__(self, ycell):
+        super().__init__()
+        self.image = pygame.transform.scale(LawnMower.im, (80, 80))
+        self.rect = self.image.get_rect()
+        self.rect.x = board.left + board.cell_hight // 3
+        self.rect.y = (ycell * board.cell_width + board.top - 2) + (24 * ycell)
+        self.ycell = ycell
+        self.mask = pygame.mask.from_surface(self.image)
+        self.ismoving = False
+
+    def update(self):
+        if not self.ismoving:
+            for el in zombies:
+                if el.rect.x < board.left and el.ycell == self.ycell:
+                    self.ismoving = True
+                    break
+        elif self.rect.x > 1380:
+            self.kill()
+        else:
+            self.rect.x += 5
+            for el in zombies:
+                if pygame.sprite.collide_mask(self, el) and self.ycell == el.ycell:
+                    el.kill()
 
 
 class Sun(pygame.sprite.Sprite):
@@ -231,13 +274,10 @@ class PeaShooter(Plant):
         super().update()
         for el in zombies:
             if el.ycell == self.ycell:
-                self.shoot()
+                if self.shoot_timer >= self.shoot_interval:
+                    bullets.add(Pea(self.xcell, self.ycell))
+                    self.shoot_timer = 0
         self.image = pygame.transform.scale(self.frames[self.current_frame], (95, 90))
-
-    def shoot(self):
-        if self.shoot_timer >= self.shoot_interval:
-            bullets.add(Pea(self.xcell, self.ycell))
-            self.shoot_timer = 0
 
 
 class Pea(pygame.sprite.Sprite):
@@ -267,7 +307,7 @@ class Pea(pygame.sprite.Sprite):
 
 
 class Zombie(pygame.sprite.Sprite):
-    def __init__(self, x, y, frames, attack_frames, speed=1, animation_speed=35):
+    def __init__(self, x, y, frames, attack_frames, speed=4, animation_speed=35):
         super().__init__()
         self.frames = frames
         self.attack_frames = attack_frames
@@ -314,7 +354,7 @@ class Zombie(pygame.sprite.Sprite):
             self.x_pos -= self.speed
             self.rect.x = self.x_pos
 
-        if self.rect.x < board.left:
+        if self.rect.x < board.left - board.cell_hight:
             game_over_animation(screen, "Game Over")
             pygame.quit()
             sys.exit()
@@ -395,7 +435,7 @@ def game_over_animation(scr, message, duration=3000):
         overlay.set_alpha(alpha)
         scr.blit(overlay, (0, 0))
         pygame.display.flip()
-        alpha += 4
+        alpha += 2
         if alpha > 255:
             alpha = 255
         clock_anim.tick(FPS)
@@ -407,7 +447,7 @@ def main():
     background = pygame.image.load("jardin.png")
     background = pygame.transform.scale(background, (WIDTH, HEIGHT))
     spawn_timer = 0
-    spawn_interval = 21000
+    spawn_interval = 1000
     running = True
 
     while running:
@@ -436,12 +476,15 @@ def main():
         sungroup.update()
         plants.update()
         bullets.update()
+        lawnmowers.update()
         screen.blit(background, (0, 0))
         Pboard.renderr(screen)
         Sam.update()
         Sam.renderrr(screen)
+        board.render(screen)
         zombies.draw(screen)
         plants.draw(screen)
+        lawnmowers.draw(screen)
         bullets.draw(screen)
         sungroup.draw(screen)
 
@@ -459,6 +502,9 @@ if __name__ == "__main__":
     sungroup = pygame.sprite.Group()
     plants = pygame.sprite.Group()
     bullets = pygame.sprite.Group()
+    lawnmowers = pygame.sprite.Group()
+    for i in range(5):
+        lawnmowers.add(LawnMower(i))
     zombie_frames = load_zombie_frames()
     zombie_attack_frames = load_zombie_attack_frames()
     sunflower_frames = load_plants_frames("sunflower")
