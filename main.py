@@ -129,7 +129,7 @@ class Board:
         x, y = mouse_pos
         col = (x - self.left) // self.cell_width
         row = (y - self.top) // self.cell_hight
-        if 0 <= col < self.width and 0 <= row < self.height:
+        if 1 <= col < self.height - 1 and 0 <= row < self.width:
             return col, row
         return None
 
@@ -177,6 +177,8 @@ class Plant(pygame.sprite.Sprite):
         self.last_update = pygame.time.get_ticks()
         self.animation_speed = animation_speed
         self.mask = pygame.mask.from_surface(self.image)
+        self.ycell = ycell
+        self.xcell = xcell
 
     def update(self):
         now = pygame.time.get_ticks()
@@ -219,15 +221,26 @@ class WallNut(Plant):
 class PeaShooter(Plant):
     def __init__(self, xcell, ycell, frames):
         super().__init__(xcell, ycell, frames)
-        self.health = 100
-        self.last_shot = 0
+        self.health = 100  # Примерное значение здоровья для горохострела
+        self.image = pygame.transform.scale(self.frames[self.current_frame], (95, 90))
+        self.mask = pygame.mask.from_surface(self.image)
+        self.rect.x = xcell * board.cell_hight + board.left + 10 - (20 * xcell)
+        self.rect.y = (ycell * board.cell_width + board.top + 14) + (22 * ycell)
+        self.shoot_timer = 0
+        self.shoot_interval = 2100
 
     def update(self):
+        self.shoot_timer += clock.get_time()
         super().update()
-        self.last_shot += clock.get_time()
-        if self.last_shot >= 2000:  # Стреляет каждые 2 секунды
-            self.last_shot = 0
-            peas.add(Pea(self.rect.x + 50, self.rect.y + 50))
+        for el in zombies:
+            if el.ycell == self.ycell:
+                self.shoot()
+        self.image = pygame.transform.scale(self.frames[self.current_frame], (95, 90))
+
+    def shoot(self):
+        if self.shoot_timer >= self.shoot_interval:
+            bullets.add(Pea(self.xcell, self.ycell))
+            self.shoot_timer = 0
 
 
 class CherryBomb(Plant):
@@ -278,6 +291,29 @@ class Pea(pygame.sprite.Sprite):
             self.kill()
 
 
+class Pea(pygame.sprite.Sprite):
+    im = load_image("pea.png")
+
+    def __init__(self, xcell, ycell):
+        super().__init__()
+        self.image = Pea.im
+        self.mask = pygame.mask.from_surface(self.image)
+        self.speed = 4
+        self.xcell = xcell
+        self.ycell = ycell
+        self.rect = self.image.get_rect()
+        self.rect.x = (xcell * board.cell_hight + board.left + 70) - (20 * xcell)
+        self.rect.y = (ycell * board.cell_width + board.top + 22) + (22 * ycell)
+        self.damage = 25
+
+    def update(self):
+        self.rect.x += self.speed
+        for el in zombies:
+            if pygame.sprite.collide_mask(self, el):
+                el.health -= self.damage
+                self.kill()
+
+
 class Zombie(pygame.sprite.Sprite):
     def __init__(self, x, y, frames, attack_frames, speed=1, animation_speed=35):
         super().__init__()
@@ -290,6 +326,7 @@ class Zombie(pygame.sprite.Sprite):
         self.x_pos = float(x)
         self.rect.y = y
         self.speed = speed
+        self.ycell = (y - board.top) // board.cell_hight + 1
         self.animation_speed = animation_speed
         self.last_update = pygame.time.get_ticks()
         self.is_attacking = False
@@ -362,8 +399,6 @@ def spawn_plant(plnt):
     if coords is None:
         return None
     else:
-        x = coords[0] * board.cell_hight + board.left - 22 * coords[0]
-        y = coords[1] * board.cell_width + board.top + 20 * coords[1]
         plant = None
         if plnt == 0:
             plant = Sunflower(coords[0], coords[1], sunflower_frames)
@@ -396,7 +431,7 @@ def game_over_animation(scr, message, duration=3000):
         overlay.set_alpha(alpha)
         scr.blit(overlay, (0, 0))
         pygame.display.flip()
-        alpha += 5
+        alpha += 4
         if alpha > 255:
             alpha = 255
         clock_anim.tick(FPS)
@@ -458,12 +493,14 @@ def main():
         peas.update()
         check_collisions()
 
+        bullets.update()
         screen.blit(background, (0, 0))
         board.render(screen)
         Pboard.renderr(screen)
         Sam.renderrr(screen)
         zombies.draw(screen)
         plants.draw(screen)
+        bullets.draw(screen)
         sungroup.draw(screen)
         peas.draw(screen)
 
@@ -481,6 +518,7 @@ if __name__ == "__main__":
     sungroup = pygame.sprite.Group()
     plants = pygame.sprite.Group()
     peas = pygame.sprite.Group()
+    bullets = pygame.sprite.Group()
     zombie_frames = load_zombie_frames()
     zombie_attack_frames = load_zombie_attack_frames()
     sunflower_frames = load_plants_frames("sunflower")
