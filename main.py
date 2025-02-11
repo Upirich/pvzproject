@@ -33,35 +33,49 @@ def load_image(name, colorkey=None, papka="data"):
     return image
 
 
+class Menu:
+    def __init__(self):
+        self.font = pygame.font.Font(None, 74)
+        self.play_text = self.font.render("Играть", True, (255, 255, 255))
+        self.exit_text = self.font.render("Выйти", True, (255, 255, 255))
+        self.play_rect = self.play_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
+        self.exit_rect = self.exit_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50))
+        self.background = pygame.image.load("menu_background.jpg")
+        self.background = pygame.transform.scale(self.background, (WIDTH, HEIGHT))
+
+    def draw(self, scr):
+        scr.blit(self.background, (0, 0))
+        scr.blit(self.play_text, self.play_rect)
+        scr.blit(self.exit_text, self.exit_rect)
+
+    def handle_click(self, pos):
+        if self.play_rect.collidepoint(pos):
+            return "play"
+        elif self.exit_rect.collidepoint(pos):
+            return "exit"
+        return None
+
+
 class SunAmount:
     def __init__(self):
         self.cell_s = 110
         self.sunam = 50
         self.sun_timer = 0
         self.sun_interval = 12000
+        self.sun_image = pygame.image.load("data/sun.png").convert_alpha()
+        self.sun_image = pygame.transform.scale(
+            self.sun_image, (self.cell_s, self.cell_s)
+        )
 
     def renderrr(self, scr):
-        pygame.draw.rect(
-            scr, pygame.Color("black"), (5, 10, self.cell_s, self.cell_s), 1
-        )
-        pygame.draw.circle(
-            scr,
-            pygame.Color((255, 236, 20)),
-            (5 + (self.cell_s // 2), 10 + (self.cell_s // 3)),
-            self.cell_s // 3,
-        )
-        pygame.draw.circle(
-            scr,
-            pygame.Color((255, 186, 0)),
-            (5 + (self.cell_s // 2), 10 + (self.cell_s // 3)),
-            self.cell_s // 4,
-        )
+        scr.blit(self.sun_image, (5, 5))
+
         font = pygame.font.Font(None, 40)
         text = font.render(str(self.sunam), True, (0, 0, 0))
         if self.sunam < 10:
-            scr.blit(text, (53, self.cell_s + 10 - (self.cell_s // 3)))
+            scr.blit(text, (53, self.cell_s + 10 - (self.cell_s // 3) + 30))
         elif 10 <= self.sunam < 100:
-            scr.blit(text, (46, self.cell_s + 10 - (self.cell_s // 3)))
+            scr.blit(text, (46, self.cell_s + 10 - (self.cell_s // 3) + 30))
         elif 100 <= self.sunam < 1000:
             scr.blit(text, (38, self.cell_s + 10 - (self.cell_s // 3)))
         else:
@@ -451,7 +465,29 @@ def main():
     pygame.quit()
 
 
+def show_menu():
+    menu = Menu()
+    clock = pygame.time.Clock()
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                result = menu.handle_click(event.pos)
+                if result == "play":
+                    return
+                elif result == "exit":
+                    pygame.quit()
+                    sys.exit()
+
+        menu.draw(screen)
+        pygame.display.flip()
+        clock.tick(FPS)
+
+
 if __name__ == "__main__":
+    show_menu()
     Sam = SunAmount()
     board = Board(5, 11)
     Pboard = PlantBoard()
