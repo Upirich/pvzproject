@@ -137,7 +137,6 @@ class Board:
         col = (x - self.left) // self.cell_width
         row = (y - self.top) // self.cell_hight
         if 1 <= col < self.height - 1 and 0 <= row < self.width:
-            print(col, row)
             return col, row
         return None
 
