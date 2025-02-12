@@ -70,7 +70,7 @@ class Menu:
 class SunAmount:
     def __init__(self):
         self.cell_s = 110
-        self.sunam = 500
+        self.sunam = 50
         self.sun_timer = 0
         self.sun_interval = 12000
         self.sun_image = pygame.image.load("data/sun.png").convert_alpha()
