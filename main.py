@@ -350,10 +350,8 @@ class Zombie(pygame.sprite.Sprite):
             else:
                 self.current_frame = (self.current_frame + 1) % len(self.frames)
                 self.image = self.frames[self.current_frame]
-        
-        
+
         for plant in plants:
-            if pygame.sprite.collide_mask(self, plant) and (self.ycell == plant.ycell):
             if pygame.sprite.collide_mask(self, plant) and (self.ycell == plant.ycell):
                 self.is_attacking = True
                 self.speed = 0
