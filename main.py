@@ -305,7 +305,7 @@ class Pea(pygame.sprite.Sprite):
 
 
 class Zombie(pygame.sprite.Sprite):
-    def __init__(self, x, y, frames, attack_frames, speed=4, animation_speed=35):
+    def __init__(self, x, y, frames, attack_frames, speed=1, animation_speed=35):
         super().__init__()
         self.frames = frames
         self.attack_frames = attack_frames
@@ -319,12 +319,12 @@ class Zombie(pygame.sprite.Sprite):
         self.ycell = (y - board.top) // board.cell_hight + 1
         self.animation_speed = animation_speed
         self.last_update = pygame.time.get_ticks()
+        self.speed_update = pygame.time.get_ticks()
         self.is_attacking = False
         self.health = 175
         self.timer = 0
 
     def update(self):
-        self.timer += 1
         if self.health <= 0:
             self.kill()
         now = pygame.time.get_ticks()
@@ -336,18 +336,21 @@ class Zombie(pygame.sprite.Sprite):
             else:
                 self.current_frame = (self.current_frame + 1) % len(self.frames)
                 self.image = self.frames[self.current_frame]
-
+        
+        
         for plant in plants:
-            if pygame.sprite.collide_mask(self, plant) and self.ycell == plant.ycell:
+            if pygame.sprite.collide_mask(self, plant) and (self.ycell == plant.ycell):
                 self.is_attacking = True
                 self.speed = 0
                 plant.health -= 1
                 break
-            else:
-                self.is_attacking = False
-                self.speed = 1
-
-        if not self.is_attacking and self.timer == 2:
+        else:
+            self.is_attacking = False
+            self.speed = 1
+        
+        now1 = pygame.time.get_ticks()
+        if not self.is_attacking and now1 - self.speed_update > self.speed:
+            self.speed_update = now1
             self.timer = 0
             self.x_pos -= self.speed
             self.rect.x = self.x_pos
