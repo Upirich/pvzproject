@@ -48,8 +48,10 @@ class Menu:
     def __init__(self):
         self.font = pygame.font.Font(None, 74)
         self.play_text = self.font.render("Играть", True, (255, 255, 255))
+        self.map_select_text = self.font.render("Выбор карты", True, (255, 255, 255))
         self.exit_text = self.font.render("Выйти", True, (255, 255, 255))
         self.play_rect = self.play_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
+        self.map_select_rect = self.map_select_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
         self.exit_rect = self.exit_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50))
         self.background = pygame.image.load("menu_background.jpg")
         self.background = pygame.transform.scale(self.background, (WIDTH, HEIGHT))
@@ -57,13 +59,44 @@ class Menu:
     def draw(self, scr):
         scr.blit(self.background, (0, 0))
         scr.blit(self.play_text, self.play_rect)
+        scr.blit(self.map_select_text, self.map_select_rect)
         scr.blit(self.exit_text, self.exit_rect)
 
     def handle_click(self, pos):
         if self.play_rect.collidepoint(pos):
             return "play"
+        elif self.map_select_rect.collidepoint(pos):
+            return "map_select"
         elif self.exit_rect.collidepoint(pos):
             return "exit"
+        return None
+    
+
+class MapSelectMenu:
+    def __init__(self):
+        self.font = pygame.font.Font(None, 74)
+        self.day_text = self.font.render("День", True, (255, 255, 255))
+        self.night_text = self.font.render("Ночь", True, (255, 255, 255))
+        self.back_text = self.font.render("Назад", True, (255, 255, 255))
+        self.day_rect = self.day_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 100))
+        self.night_rect = self.night_text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+        self.back_rect = self.back_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 100))
+        self.background = pygame.image.load("menu_background.jpg")
+        self.background = pygame.transform.scale(self.background, (WIDTH, HEIGHT))
+
+    def draw(self, scr):
+        scr.blit(self.background, (0, 0))
+        scr.blit(self.day_text, self.day_rect)
+        scr.blit(self.night_text, self.night_rect)
+        scr.blit(self.back_text, self.back_rect)
+
+    def handle_click(self, pos):
+        if self.day_rect.collidepoint(pos):
+            return "day"
+        elif self.night_rect.collidepoint(pos):
+            return "night"
+        elif self.back_rect.collidepoint(pos):
+            return "back"
         return None
 
 
@@ -456,10 +489,13 @@ def game_over_animation(scr, message, duration=3000):
         clock_anim.tick(FPS)
 
 
-def main():
+def main(selected_map):
     global clock
     clock = pygame.time.Clock()
-    background = pygame.image.load("jardin.png")
+    if selected_map == "day":
+        background = pygame.image.load("jarding.jpg")
+    else:
+        background = pygame.image.load("night_pvz.jpg")
     background = pygame.transform.scale(background, (WIDTH, HEIGHT))
     spawn_timer = 0
     spawn_interval = 21000
@@ -514,27 +550,40 @@ def main():
 
 def show_menu():
     menu = Menu()
+    map_select_menu = MapSelectMenu()
+    current_menu = menu
     clock = pygame.time.Clock()
+    selected_map = "day"
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN:
-                result = menu.handle_click(event.pos)
+                result = current_menu.handle_click(event.pos)
                 if result == "play":
-                    return
+                    return selected_map
+                elif result == "map_select":
+                    current_menu = map_select_menu
+                    if result == "day":
+                        selected_map = "day"
+                        current_menu = menu
+                    elif result == "night":
+                        selected_map = "night"
+                        current_menu = menu
+                    elif result == "back":
+                        current_menu = menu
                 elif result == "exit":
                     pygame.quit()
                     sys.exit()
 
-        menu.draw(screen)
+        current_menu.draw(screen)
         pygame.display.flip()
         clock.tick(FPS)
 
 
 if __name__ == "__main__":
-    show_menu()
+    selected_map = show_menu()
     pygame.mixer.music.play(-1)
     Sam = SunAmount()
     board = Board(5, 11)
@@ -551,4 +600,4 @@ if __name__ == "__main__":
     sunflower_frames = load_plants_frames("sunflower")
     nut_frames = load_plants_frames("wallnut")
     pea_shooter_frames = load_plants_frames("peashooter")
-    main()
+    main(selected_map)
