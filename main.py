@@ -21,8 +21,9 @@ sound_effect = pygame.mixer.Sound("data/awooga.mp3")
 kill_effect = pygame.mixer.Sound("data/zombie_falling.mp3")
 shoot_effect = pygame.mixer.Sound("data/throw.mp3")
 chomp = pygame.mixer.Sound("data/chomp.mp3")
-chomp.set_volume(0.2)
+chomp.set_volume(0.1)
 hit = pygame.mixer.Sound("data/hit.mp3")
+hit.set_volume(0.8)
 sound_interval = 10
 last_sound_time = 0
 
@@ -365,7 +366,7 @@ class Sunflower(Plant):
     def __init__(self, xcell, ycell, frames):
         super().__init__(xcell, ycell, frames)
         self.last_sun = 0
-        self.interval = 14000
+        self.interval = 13000
         self.health = 300
 
     def update(self):
@@ -411,9 +412,7 @@ class PeaShooter(Plant):
                     bullets.add(Pea(self.xcell, self.ycell))
                     self.shoot_timer = 0
                     shoot_effect.play()
-                self.image = pygame.transform.scale(
-                    self.frames[self.current_frame], (95, 90)
-                )
+        self.image = pygame.transform.scale(self.frames[self.current_frame], (95, 90))
 
 
 class Pea(pygame.sprite.Sprite):
@@ -498,7 +497,7 @@ class Zombie(pygame.sprite.Sprite):
             self.timer = 0
             self.x_pos -= self.speed
             self.rect.x = self.x_pos
-            
+
         if self.rect.x < board.left - board.cell_hight:
             game_over_animation(screen, "Game Over")
             pygame.quit()
@@ -508,9 +507,10 @@ class Zombie(pygame.sprite.Sprite):
 class ConeZombie(Zombie):
     def __init__(self, x, y, frames, attack_frames, speed=1, animation_speed=90):
         super().__init__(x, y, frames, attack_frames, speed, animation_speed)
-        self.health = 370
+        self.health = 540
 
     def update(self):
+        self.timer += 1
         if self.health <= 0:
             kill_effect.play()
             self.kill()
@@ -524,22 +524,27 @@ class ConeZombie(Zombie):
                 self.current_frame = (self.current_frame + 1) % len(self.frames)
                 self.image = self.frames[self.current_frame]
             self.mask = pygame.mask.from_surface(self.image)
+
         for plant in plants:
             if pygame.sprite.collide_mask(self, plant) and (self.ycell == plant.ycell):
                 self.is_attacking = True
                 self.speed = 0
                 plant.health -= 1
-                chomp.play()
+                if self.sound_timer >= self.chomp_len:
+                    self.sound_timer = 0
+                    chomp.play()
+                else:
+                    self.sound_timer += clock.get_time()
                 break
         else:
             self.is_attacking = False
             self.speed = 1
-        now1 = pygame.time.get_ticks()
-        if not self.is_attacking and now1 - self.speed_update > self.speed:
-            self.speed_update = now1
+
+        if not self.is_attacking and self.timer >= 2:
             self.timer = 0
             self.x_pos -= self.speed
             self.rect.x = self.x_pos
+
         if self.rect.x < board.left - board.cell_hight:
             game_over_animation(screen, "Game Over")
             pygame.quit()
@@ -687,11 +692,14 @@ def main(DayOrNight):
         background = pygame.image.load("nightBackground.png")
         background = pygame.transform.scale(background, (WIDTH, HEIGHT + 200))
     spawn_timer = 0
-    spawn_interval = 21000
+    if DayOrNight:
+        spawn_interval = 24000
+    else:
+        spawn_interval = 30000
     running = True
     sound_flag = True
     pygame.mixer.music.play(-1)
-    pygame.mixer.music.set_volume(0.7)
+    pygame.mixer.music.set_volume(0.6)
 
     while running:
         for event in pygame.event.get():
@@ -709,6 +717,7 @@ def main(DayOrNight):
                         continue
                     if Pboard.selected_plant is not None:
                         spawn_plant(Pboard.selected_plant)
+
         spawn_timer += clock.get_time()
         if spawn_timer >= spawn_interval:
             spawn_timer = 0
@@ -717,7 +726,7 @@ def main(DayOrNight):
                 sound_flag = False
             if spawn_interval > 4000:
                 spawn_interval -= 200
-            if random.random() < 0.3:
+            if random.random() <= 0.3:
                 spawn_cone_zombie(cone_zombie_frames, cone_zombie_attack_frames)
             else:
                 spawn_zombie(zombie_frames, zombie_attack_frames)
@@ -759,7 +768,7 @@ def show_main_menu():
                 elif result == "exit":
                     pygame.quit()
                     sys.exit()
-                    
+
         menu.update()
         menu.draw(screen)
         pygame.display.flip()
@@ -783,7 +792,7 @@ def show_map_select():
                 elif res == 2:
                     main(0)
                 pygame.mixer.music.stop()
-                
+
         menu.draw(screen)
         pygame.display.flip()
         clock.tick(FPS)
