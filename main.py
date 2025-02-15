@@ -3,6 +3,9 @@ import random
 import os
 import sys
 
+import pygame.draw
+
+
 pygame.init()
 WIDTH, HEIGHT = 1300, 800
 FPS = 60
@@ -18,6 +21,7 @@ sound_effect = pygame.mixer.Sound("data/awooga.mp3")
 kill_effect = pygame.mixer.Sound("data/zombie_falling.mp3")
 shoot_effect = pygame.mixer.Sound("data/throw.mp3")
 chomp = pygame.mixer.Sound("data/chomp.mp3")
+chomp.set_volume(0.2)
 hit = pygame.mixer.Sound("data/hit.mp3")
 sound_interval = 10
 last_sound_time = 0
@@ -39,27 +43,152 @@ def load_image(name, colorkey=None, papka="data"):
     return image
 
 
-class Menu:
+def isclicked(point, polygon):
+    x, y = point
+    n = len(polygon)
+    flag = False
+    for i in range(n):
+        x1, y1 = polygon[i]
+        x2, y2 = polygon[(i + 1) % n]
+        if y > min(y1, y2):
+            if y <= max(y1, y2):
+                if x <= max(x1, x2):
+                    if y1 != y2:
+                        xinters = (y - y1) * (x2 - x1) / (y2 - y1) + x1
+                    if y1 == y2 or x <= xinters:
+                        flag = not flag
+    return flag
+
+
+class MainMenu:
     def __init__(self):
-        self.font = pygame.font.Font(None, 74)
-        self.play_text = self.font.render("Играть", True, (255, 255, 255))
-        self.exit_text = self.font.render("Выйти", True, (255, 255, 255))
-        self.play_rect = self.play_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
-        self.exit_rect = self.exit_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50))
-        self.background = pygame.image.load("menu_background.jpg")
+        self.background = load_image("main_menu.png", papka="menu")
+        self.backgroundPlay = load_image("menuPlay.png", papka="menu")
+        self.backgroundExit = load_image("menuExit.png", papka="menu")
         self.background = pygame.transform.scale(self.background, (WIDTH, HEIGHT))
+        self.backgroundPlay = pygame.transform.scale(
+            self.backgroundPlay, (WIDTH, HEIGHT)
+        )
+        self.backgroundExit = pygame.transform.scale(
+            self.backgroundExit, (WIDTH, HEIGHT)
+        )
+        self.selected = 0
+        self.playButtonPoints = [
+            (666, 130),
+            (662, 216),
+            (1039, 277),
+            (1056, 160),
+            (957, 143),
+            (913, 94),
+            (774, 93),
+            (733, 124),
+        ]
+        self.exitButtonPoints = [
+            (1023, 703),
+            (1054, 731),
+            (1085, 732),
+            (1111, 713),
+            (1106, 605),
+            (1037, 606),
+        ]
+
+    def draw(self, scr):
+        if not self.selected:
+            scr.blit(self.background, (0, 0))
+        elif self.selected == 1:
+            scr.blit(self.backgroundPlay, (0, 0))
+        elif self.selected == 2:
+            scr.blit(self.backgroundExit, (0, 0))
+
+    def handle_click(self, pos):
+        if isclicked(pos, self.playButtonPoints):
+            return "play"
+        elif isclicked(pos, self.exitButtonPoints):
+            return "exit"
+
+    def update(self):
+        pos = pygame.mouse.get_pos()
+        if isclicked(pos, self.playButtonPoints):
+            self.selected = 1
+        elif isclicked(pos, self.exitButtonPoints):
+            self.selected = 2
+        else:
+            self.selected = 0
+
+
+class Map_select:
+    def __init__(self):
+        self.background = pygame.transform.scale(
+            load_image("menu_background.png", papka="menu"), (WIDTH, HEIGHT)
+        )
+        self.day = pygame.transform.scale(
+            load_image("day.png", papka="menu"), (300, 200)
+        )
+        self.night = pygame.transform.scale(
+            load_image("night.png", papka="menu"), (300, 200)
+        )
+        self.select_map = pygame.transform.scale(
+            load_image("map_select_menu.png", papka="menu"), (700, 500)
+        )
+        self.smRect = self.select_map.get_rect()
+        self.dayRect = pygame.rect.Rect(
+            WIDTH // 2 - self.smRect[2] // 2 + self.smRect[2] // 22,
+            HEIGHT // 2 - self.smRect[3] // 2 + self.smRect[3] // 3,
+            300,
+            200,
+        )
+        self.nightRect = pygame.rect.Rect(
+            WIDTH // 2
+            + (self.smRect[2] // 2 - self.night.get_rect()[2])
+            - self.smRect[2] // 22,
+            HEIGHT // 2 - self.smRect[3] // 2 + self.smRect[3] // 3,
+            300,
+            200,
+        )
+        self.exitRect = pygame.rect.Rect(405, 588, 215, 42)
+        self.font = pygame.font.SysFont("arial", 40)
+        self.text = self.font.render("Choose a level", True, pygame.Color((3, 192, 60)))
 
     def draw(self, scr):
         scr.blit(self.background, (0, 0))
-        scr.blit(self.play_text, self.play_rect)
-        scr.blit(self.exit_text, self.exit_rect)
+        scr.blit(
+            self.select_map,
+            (
+                WIDTH // 2 - self.smRect[2] // 2,
+                HEIGHT // 2 - self.smRect[3] // 2,
+            ),
+        )
+        scr.blit(
+            self.day,
+            (
+                WIDTH // 2 - self.smRect[2] // 2 + self.smRect[2] // 22,
+                HEIGHT // 2 - self.smRect[3] // 2 + self.smRect[3] // 3,
+            ),
+        )
+        scr.blit(
+            self.night,
+            (
+                WIDTH // 2
+                + (self.smRect[2] // 2 - self.night.get_rect()[2])
+                - self.smRect[2] // 22,
+                HEIGHT // 2 - self.smRect[3] // 2 + self.smRect[3] // 3,
+            ),
+        )
+        scr.blit(
+            self.text,
+            (
+                WIDTH // 2 - self.text.get_rect()[2] // 2,
+                HEIGHT // 2 - self.smRect[3] // 3,
+            ),
+        )
 
-    def handle_click(self, pos):
-        if self.play_rect.collidepoint(pos):
-            return "play"
-        elif self.exit_rect.collidepoint(pos):
-            return "exit"
-        return None
+    def on_click(self, pos):
+        if self.exitRect.collidepoint(pos):
+            return -1
+        elif self.dayRect.collidepoint(pos):
+            return 1
+        elif self.nightRect.collidepoint(pos):
+            return 2
 
 
 class SunAmount:
@@ -245,6 +374,7 @@ class Sunflower(Plant):
         if self.last_sun >= self.interval:
             self.last_sun = 0
             sungroup.add(Sun(True, self.rect.x, self.rect.y))
+            shoot_effect.play()
 
 
 class WallNut(Plant):
@@ -330,10 +460,13 @@ class Zombie(pygame.sprite.Sprite):
         self.last_update = pygame.time.get_ticks()
         self.speed_update = pygame.time.get_ticks()
         self.is_attacking = False
-        self.health = 175
+        self.health = 200
         self.timer = 0
+        self.chomp_len = round(chomp.get_length(), 2) * 1000
+        self.sound_timer = 0
 
     def update(self):
+        self.timer += 1
         if self.health <= 0:
             kill_effect.play()
             self.kill()
@@ -351,17 +484,21 @@ class Zombie(pygame.sprite.Sprite):
                 self.is_attacking = True
                 self.speed = 0
                 plant.health -= 1
-                chomp.play()
+                if self.sound_timer >= self.chomp_len:
+                    self.sound_timer = 0
+                    chomp.play()
+                else:
+                    self.sound_timer += clock.get_time()
                 break
         else:
             self.is_attacking = False
             self.speed = 1
-        now1 = pygame.time.get_ticks()
-        if not self.is_attacking and now1 - self.speed_update > self.speed:
-            self.speed_update = now1
+
+        if not self.is_attacking and self.timer >= 2:
             self.timer = 0
             self.x_pos -= self.speed
             self.rect.x = self.x_pos
+            
         if self.rect.x < board.left - board.cell_hight:
             game_over_animation(screen, "Game Over")
             pygame.quit()
@@ -540,19 +677,28 @@ def game_over_animation(scr, message, duration=3000):
         clock_anim.tick(FPS)
 
 
-def main():
+def main(DayOrNight):
     global clock
     clock = pygame.time.Clock()
-    background = pygame.image.load("jardin.png")
-    background = pygame.transform.scale(background, (WIDTH, HEIGHT))
+    if DayOrNight:
+        background = pygame.image.load("dayBackground.png")
+        background = pygame.transform.scale(background, (WIDTH, HEIGHT))
+    else:
+        background = pygame.image.load("nightBackground.png")
+        background = pygame.transform.scale(background, (WIDTH, HEIGHT + 200))
     spawn_timer = 0
-    spawn_interval = 7000
+    spawn_interval = 21000
     running = True
     sound_flag = True
+    pygame.mixer.music.play(-1)
+    pygame.mixer.music.set_volume(0.7)
+
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+                pygame.quit()
+                sys.exit()
             if event.type == pygame.MOUSEBUTTONDOWN:
                 flag = True
                 for elem in sungroup:
@@ -571,7 +717,7 @@ def main():
                 sound_flag = False
             if spawn_interval > 4000:
                 spawn_interval -= 200
-            if random.random() < 0.5:  # 50% шанс спавна зомби с конусом
+            if random.random() < 0.3:
                 spawn_cone_zombie(cone_zombie_frames, cone_zombie_attack_frames)
             else:
                 spawn_zombie(zombie_frames, zombie_attack_frames)
@@ -580,9 +726,13 @@ def main():
         plants.update()
         bullets.update()
         lawnmowers.update()
-        screen.blit(background, (0, 0))
+        if not DayOrNight:
+            screen.blit(background, (0, -160))
+        else:
+            screen.blit(background, (0, 0))
         Pboard.renderr(screen)
-        Sam.update()
+        if DayOrNight:
+            Sam.update()
         Sam.renderrr(screen)
         zombies.draw(screen)
         plants.draw(screen)
@@ -592,11 +742,10 @@ def main():
         pygame.display.flip()
         clock.tick(FPS)
     pygame.mixer.music.stop()
-    pygame.quit()
 
 
-def show_menu():
-    menu = Menu()
+def show_main_menu():
+    menu = MainMenu()
     clock = pygame.time.Clock()
     while True:
         for event in pygame.event.get():
@@ -606,18 +755,41 @@ def show_menu():
             if event.type == pygame.MOUSEBUTTONDOWN:
                 result = menu.handle_click(event.pos)
                 if result == "play":
-                    return
+                    show_map_select()
                 elif result == "exit":
                     pygame.quit()
                     sys.exit()
+                    
+        menu.update()
+        menu.draw(screen)
+        pygame.display.flip()
+        clock.tick(FPS)
+
+
+def show_map_select():
+    clock = pygame.time.Clock()
+    menu = Map_select()
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                res = menu.on_click(event.pos)
+                if res == -1:
+                    return
+                elif res == 1:
+                    main(1)
+                elif res == 2:
+                    main(0)
+                pygame.mixer.music.stop()
+                
         menu.draw(screen)
         pygame.display.flip()
         clock.tick(FPS)
 
 
 if __name__ == "__main__":
-    show_menu()
-    pygame.mixer.music.play(-1)
     Sam = SunAmount()
     board = Board(5, 11)
     Pboard = PlantBoard()
@@ -635,4 +807,4 @@ if __name__ == "__main__":
     sunflower_frames = load_plants_frames("sunflower")
     nut_frames = load_plants_frames("wallnut")
     pea_shooter_frames = load_plants_frames("peashooter")
-    main()
+    show_main_menu()
