@@ -369,7 +369,7 @@ class Zombie(pygame.sprite.Sprite):
 
 
 class ConeZombie(Zombie):
-    def __init__(self, x, y, frames, attack_frames, speed=1, animation_speed=35):
+    def __init__(self, x, y, frames, attack_frames, speed=1, animation_speed=90):
         super().__init__(x, y, frames, attack_frames, speed, animation_speed)
         self.health = 370
 
@@ -441,9 +441,9 @@ def load_zombie_attack_frames():
 
 def load_cone_zombie_frames():
     frames = []
-    for i in range(1, 30):
+    for i in range(0, 21):
         frame = pygame.image.load(
-            f"assets/cone_zombies/walk/frame-{i}.png"
+            f"assets/cone_zombies/walk/ConeheadZombie_{i}.png"
         ).convert_alpha()
         frames.append(frame)
     return frames
@@ -451,9 +451,9 @@ def load_cone_zombie_frames():
 
 def load_cone_zombie_attack_frames():
     frames = []
-    for i in range(1, 40):
+    for i in range(0, 10):
         frame = pygame.image.load(
-            f"assets/cone_zombies/attack/frame-{i}.png"
+            f"assets/cone_zombies/attack/ConeheadZombieAttack_{i}.png"
         ).convert_alpha()
         frames.append(frame)
     return frames
@@ -487,7 +487,7 @@ def spawn_cone_zombie(frames, attack_frames):
     y_position = lane * board.cell_hight + (board.cell_hight // 2) + 25
     cone_zombie = ConeZombie(WIDTH, y_position, frames, attack_frames)
     zombies.add(cone_zombie)
-    if random.random() < 0.5:  # 50% шанс спавна зомби с конусом
+    if random.random() < 0.5:
         spawn_cone_zombie(cone_zombie_frames, cone_zombie_attack_frames)
     else:
         spawn_zombie(zombie_frames, zombie_attack_frames)
