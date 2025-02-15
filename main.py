@@ -4,18 +4,14 @@ import os
 import sys
 
 pygame.init()
-
 WIDTH, HEIGHT = 1300, 800
 FPS = 60
-
 PLANTSIMAGES = [f"frame-{i}.png" for i in range(1, len(os.listdir("PBoardImages")) + 1)]
 DARKPLANTSIMAGES = [
     f"frame-{i}.png" for i in range(1, len(os.listdir("DarkPBoardImages")) + 1)
 ]
-
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Plants vs Zombies")
-
 pygame.mixer.init()
 pygame.mixer.music.load("data/plants_vs_zombies.mp3")
 sound_effect = pygame.mixer.Sound("data/awooga.mp3")
@@ -23,7 +19,6 @@ kill_effect = pygame.mixer.Sound("data/zombie_falling.mp3")
 shoot_effect = pygame.mixer.Sound("data/throw.mp3")
 chomp = pygame.mixer.Sound("data/chomp.mp3")
 hit = pygame.mixer.Sound("data/hit.mp3")
-
 sound_interval = 10
 last_sound_time = 0
 
@@ -38,7 +33,7 @@ def load_image(name, colorkey=None, papka="data"):
         image = image.convert()
         if colorkey == -1:
             colorkey = image.get_at((0, 0))
-            image.set_colorkey(colorkey)
+        image.set_colorkey(colorkey)
     else:
         image = image.convert_alpha()
     return image
@@ -80,7 +75,6 @@ class SunAmount:
 
     def renderrr(self, scr):
         scr.blit(self.sun_image, (5, 5))
-
         font = pygame.font.Font(None, 40)
         text = font.render(str(self.sunam), True, (0, 0, 0))
         if self.sunam < 10:
@@ -287,7 +281,9 @@ class PeaShooter(Plant):
                     bullets.add(Pea(self.xcell, self.ycell))
                     self.shoot_timer = 0
                     shoot_effect.play()
-        self.image = pygame.transform.scale(self.frames[self.current_frame], (95, 90))
+                self.image = pygame.transform.scale(
+                    self.frames[self.current_frame], (95, 90)
+                )
 
 
 class Pea(pygame.sprite.Sprite):
@@ -350,7 +346,6 @@ class Zombie(pygame.sprite.Sprite):
             else:
                 self.current_frame = (self.current_frame + 1) % len(self.frames)
                 self.image = self.frames[self.current_frame]
-
         for plant in plants:
             if pygame.sprite.collide_mask(self, plant) and (self.ycell == plant.ycell):
                 self.is_attacking = True
@@ -361,14 +356,53 @@ class Zombie(pygame.sprite.Sprite):
         else:
             self.is_attacking = False
             self.speed = 1
-
         now1 = pygame.time.get_ticks()
         if not self.is_attacking and now1 - self.speed_update > self.speed:
             self.speed_update = now1
             self.timer = 0
             self.x_pos -= self.speed
             self.rect.x = self.x_pos
+        if self.rect.x < board.left - board.cell_hight:
+            game_over_animation(screen, "Game Over")
+            pygame.quit()
+            sys.exit()
 
+
+class ConeZombie(Zombie):
+    def __init__(self, x, y, frames, attack_frames, speed=1, animation_speed=35):
+        super().__init__(x, y, frames, attack_frames, speed, animation_speed)
+        self.health = 370
+
+    def update(self):
+        if self.health <= 0:
+            kill_effect.play()
+            self.kill()
+        now = pygame.time.get_ticks()
+        if now - self.last_update > self.animation_speed:
+            self.last_update = now
+            if self.is_attacking:
+                self.current_frame = (self.current_frame + 1) % len(self.attack_frames)
+                self.image = self.attack_frames[self.current_frame]
+            else:
+                self.current_frame = (self.current_frame + 1) % len(self.frames)
+                self.image = self.frames[self.current_frame]
+            self.mask = pygame.mask.from_surface(self.image)
+        for plant in plants:
+            if pygame.sprite.collide_mask(self, plant) and (self.ycell == plant.ycell):
+                self.is_attacking = True
+                self.speed = 0
+                plant.health -= 1
+                chomp.play()
+                break
+        else:
+            self.is_attacking = False
+            self.speed = 1
+        now1 = pygame.time.get_ticks()
+        if not self.is_attacking and now1 - self.speed_update > self.speed:
+            self.speed_update = now1
+            self.timer = 0
+            self.x_pos -= self.speed
+            self.rect.x = self.x_pos
         if self.rect.x < board.left - board.cell_hight:
             game_over_animation(screen, "Game Over")
             pygame.quit()
@@ -378,7 +412,14 @@ class Zombie(pygame.sprite.Sprite):
 def load_zombie_frames():
     frames = []
     for i in range(1, 43):
-        frame = pygame.image.load(f"assets/zombies/walk/frame-{i}.gif").convert_alpha()
+        gif_path = f"assets/zombies/walk/frame-{i}.gif"
+        png_path = f"assets/zombies/walk/frame-{i}.png"
+        if os.path.exists(gif_path):
+            frame = pygame.image.load(gif_path).convert_alpha()
+        elif os.path.exists(png_path):
+            frame = pygame.image.load(png_path).convert_alpha()
+        else:
+            raise FileNotFoundError(f"No frame-{i} found in assets/zombies/walk/")
         frames.append(frame)
     return frames
 
@@ -386,8 +427,33 @@ def load_zombie_frames():
 def load_zombie_attack_frames():
     frames = []
     for i in range(1, 40):
+        gif_path = f"assets/zombies/attack/frame-{i}.gif"
+        png_path = f"assets/zombies/attack/frame-{i}.png"
+        if os.path.exists(gif_path):
+            frame = pygame.image.load(gif_path).convert_alpha()
+        elif os.path.exists(png_path):
+            frame = pygame.image.load(png_path).convert_alpha()
+        else:
+            raise FileNotFoundError(f"No frame-{i} found in assets/zombies/attack/")
+        frames.append(frame)
+    return frames
+
+
+def load_cone_zombie_frames():
+    frames = []
+    for i in range(1, 30):
         frame = pygame.image.load(
-            f"assets/zombies/attack/frame-{i}.gif"
+            f"assets/cone_zombies/walk/frame-{i}.png"
+        ).convert_alpha()
+        frames.append(frame)
+    return frames
+
+
+def load_cone_zombie_attack_frames():
+    frames = []
+    for i in range(1, 40):
+        frame = pygame.image.load(
+            f"assets/cone_zombies/attack/frame-{i}.png"
         ).convert_alpha()
         frames.append(frame)
     return frames
@@ -397,7 +463,14 @@ def load_plants_frames(plant):
     frames = []
     num_frames = len(os.listdir(plant))
     for i in range(1, num_frames + 1):
-        image = pygame.image.load(f"{plant}/frame-{i}.gif")
+        gif_path = f"{plant}/frame-{i}.gif"
+        png_path = f"{plant}/frame-{i}.png"
+        if os.path.exists(gif_path):
+            image = pygame.image.load(gif_path).convert_alpha()
+        elif os.path.exists(png_path):
+            image = pygame.image.load(png_path).convert_alpha()
+        else:
+            raise FileNotFoundError(f"No frame-{i} found in {plant}/")
         frames.append(image)
     return frames
 
@@ -407,6 +480,17 @@ def spawn_zombie(frames, attack_frames):
     y_position = lane * board.cell_hight + (board.cell_hight // 2) + 25
     zombie = Zombie(WIDTH, y_position, frames, attack_frames)
     zombies.add(zombie)
+
+
+def spawn_cone_zombie(frames, attack_frames):
+    lane = random.randint(0, board.width - 1)
+    y_position = lane * board.cell_hight + (board.cell_hight // 2) + 25
+    cone_zombie = ConeZombie(WIDTH, y_position, frames, attack_frames)
+    zombies.add(cone_zombie)
+    if random.random() < 0.5:  # 50% шанс спавна зомби с конусом
+        spawn_cone_zombie(cone_zombie_frames, cone_zombie_attack_frames)
+    else:
+        spawn_zombie(zombie_frames, zombie_attack_frames)
 
 
 def spawn_plant(plnt):
@@ -462,10 +546,9 @@ def main():
     background = pygame.image.load("jardin.png")
     background = pygame.transform.scale(background, (WIDTH, HEIGHT))
     spawn_timer = 0
-    spawn_interval = 21000
+    spawn_interval = 7000
     running = True
     sound_flag = True
-
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -480,7 +563,6 @@ def main():
                         continue
                     if Pboard.selected_plant is not None:
                         spawn_plant(Pboard.selected_plant)
-
         spawn_timer += clock.get_time()
         if spawn_timer >= spawn_interval:
             spawn_timer = 0
@@ -489,8 +571,10 @@ def main():
                 sound_flag = False
             if spawn_interval > 4000:
                 spawn_interval -= 200
-            spawn_zombie(zombie_frames, zombie_attack_frames)
-
+            if random.random() < 0.5:  # 50% шанс спавна зомби с конусом
+                spawn_cone_zombie(cone_zombie_frames, cone_zombie_attack_frames)
+            else:
+                spawn_zombie(zombie_frames, zombie_attack_frames)
         zombies.update()
         sungroup.update()
         plants.update()
@@ -505,7 +589,6 @@ def main():
         lawnmowers.draw(screen)
         bullets.draw(screen)
         sungroup.draw(screen)
-
         pygame.display.flip()
         clock.tick(FPS)
     pygame.mixer.music.stop()
@@ -527,7 +610,6 @@ def show_menu():
                 elif result == "exit":
                     pygame.quit()
                     sys.exit()
-
         menu.draw(screen)
         pygame.display.flip()
         clock.tick(FPS)
@@ -548,6 +630,8 @@ if __name__ == "__main__":
         lawnmowers.add(LawnMower(i))
     zombie_frames = load_zombie_frames()
     zombie_attack_frames = load_zombie_attack_frames()
+    cone_zombie_frames = load_cone_zombie_frames()
+    cone_zombie_attack_frames = load_cone_zombie_attack_frames()
     sunflower_frames = load_plants_frames("sunflower")
     nut_frames = load_plants_frames("wallnut")
     pea_shooter_frames = load_plants_frames("peashooter")
