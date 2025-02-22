@@ -2,7 +2,6 @@ import pygame
 import random
 import os
 import sys
-
 import pygame.draw
 
 
@@ -14,6 +13,7 @@ DARKPLANTSIMAGES = [
     f"frame-{i}.png" for i in range(1, len(os.listdir("DarkPBoardImages")) + 1)
 ]
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
+
 pygame.display.set_caption("Plants vs Zombies")
 pygame.mixer.init()
 pygame.mixer.music.load("data/plants_vs_zombies.mp3")
@@ -84,6 +84,7 @@ class MainMenu:
             (774, 93),
             (733, 124),
         ]
+        self.resPlay = [(i[0], i[1]) for i in self.playButtonPoints]
         self.exitButtonPoints = [
             (1023, 703),
             (1054, 731),
@@ -102,7 +103,7 @@ class MainMenu:
             scr.blit(self.backgroundExit, (0, 0))
 
     def handle_click(self, pos):
-        if isclicked(pos, self.playButtonPoints):
+        if isclicked(pos, self.resPlay):
             return "play"
         elif isclicked(pos, self.exitButtonPoints):
             return "exit"
@@ -281,10 +282,10 @@ class LawnMower(pygame.sprite.Sprite):
 
     def __init__(self, ycell):
         super().__init__()
-        self.image = pygame.transform.scale(LawnMower.im, (80, 80))
+        self.image = pygame.transform.scale(LawnMower.im, (int(80), int(80)))
         self.rect = self.image.get_rect()
-        self.rect.x = board.left + board.cell_hight // 3
-        self.rect.y = (ycell * board.cell_width + board.top - 2) + (24 * ycell)
+        self.rect.x = int((board.left + board.cell_hight // 3))
+        self.rect.y = int((ycell * board.cell_width + board.top - 2) + (24 * ycell))
         self.ycell = ycell
         self.mask = pygame.mask.from_surface(self.image)
         self.ismoving = False

@@ -1,1 +1,1 @@
-pygame
+python3, pygame
